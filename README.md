@@ -83,8 +83,8 @@ The rest of this tutorial will be performed in a terminal.
 1. Clone this repository locally and make it the current working folder.
 
    ```console
-   $ git clone https://github.com/shadanan/gcp-scc-finding-notification-azure-email.git
-   $ cd gcp-scc-finding-notification-azure-email
+   git clone https://github.com/shadanan/gcp-scc-finding-notification-azure-email.git
+   cd gcp-scc-finding-notification-azure-email
    ```
 
 ### Configure the Pub/Sub Topic and Subscription
@@ -94,24 +94,24 @@ Cloud Pub/Sub is a real-time messaging service that enables messages to be sent 
 1. In the shell that we prepared at the beginning, set the org and project ID. The selected project is where the Cloud Function will execute form.
 
    ```console
-   $ export ORG_ID=<your org id>
-   $ export PROJECT_ID=<your project id>
-   $ gcloud config set project $PROJECT_ID
+   export ORG_ID=<your org id>
+   export PROJECT_ID=<your project id>
+   gcloud config set project $PROJECT_ID
    ```
 
 1. Create the topic where all the findings will be published.
 
    ```console
-   $ gcloud pubsub topics create scc-critical-and-high-severity-findings-topic
-   $ export TOPIC=projects/$PROJECT_ID/topics/scc-critical-and-high-severity-findings-topic
+   gcloud pubsub topics create scc-critical-and-high-severity-findings-topic
+   export TOPIC=projects/$PROJECT_ID/topics/scc-critical-and-high-severity-findings-topic
    ```
 
 1. Configure SCC to publish notifications to our topic.
 
    ```console
-   $ gcloud scc notifications create scc-critical-and-high-severity-findings-notify \
-       --organization $ORG_ID --pubsub-topic $TOPIC \
-       --filter '(severity="HIGH" OR severity="CRITICAL") AND state="ACTIVE"'
+   gcloud scc notifications create scc-critical-and-high-severity-findings-notify \
+     --organization $ORG_ID --pubsub-topic $TOPIC \
+     --filter '(severity="HIGH" OR severity="CRITICAL") AND state="ACTIVE"'
    ```
 
 ### Create a Service Account for our Cloud Function
@@ -121,18 +121,18 @@ In this section, we'll provision a service account that will be used by our clou
 1. Create the service account.
 
    ```console
-   $ export SERVICE_ACCOUNT=email-cloud-function-sa
-   $ gcloud iam service-accounts create $SERVICE_ACCOUNT \
-       --display-name "SCC Finding Notifier Email Cloud Function" \
-       --project $PROJECT_ID
+   export SERVICE_ACCOUNT=email-cloud-function-sa
+   gcloud iam service-accounts create $SERVICE_ACCOUNT \
+     --display-name "SCC Finding Notifier Email Cloud Function" \
+     --project $PROJECT_ID
    ```
 
 1. Grant the service account the `securitycenter.admin` role for the organization.
 
    ```console
-   $ gcloud organizations add-iam-policy-binding $ORG_ID \
-       --member="serviceAccount:$SERVICE_ACCOUNT@$PROJECT_ID.iam.gserviceaccount.com" \
-       --role='roles/securitycenter.admin'
+   gcloud organizations add-iam-policy-binding $ORG_ID \
+     --member="serviceAccount:$SERVICE_ACCOUNT@$PROJECT_ID.iam.gserviceaccount.com" \
+     --role='roles/securitycenter.admin'
    ```
 
 ### Save App Secret in Secrets Manager
@@ -140,25 +140,25 @@ In this section, we'll provision a service account that will be used by our clou
 1. Export the App Secret into an environment variable.
 
    ```console
-   $ export APP_SECRET=<your-app-secret>
+   export APP_SECRET=<your-app-secret>
    ```
 
 1. Create the token.
 
    ```console
-   $ gcloud secrets create azure-app-secret
+   gcloud secrets create azure-app-secret
    ```
 
 1. Set the value of the token.
 
    ```console
-   $ echo -n $APP_SECRET | gcloud secrets versions add azure-app-secret --data-file=-
+   echo -n $APP_SECRET | gcloud secrets versions add azure-app-secret --data-file=-
    ```
 
 1. Grant your service account access to the token.
 
    ```console
-   $ gcloud secrets add-iam-policy-binding azure-app-secret \
+   gcloud secrets add-iam-policy-binding azure-app-secret \
      --member="serviceAccount:$SERVICE_ACCOUNT@$PROJECT_ID.iam.gserviceaccount.com" \
      --role='roles/secretmanager.secretAccessor'
    ```
@@ -168,27 +168,27 @@ In this section, we'll provision a service account that will be used by our clou
 1. Set the Client, Tenant, and User IDs.
 
    ```console
-   $ export CLIENT_ID=<your-app-client-id>
-   $ export TENANT_ID=<your-app-tenant-id>
-   $ export USER_ID=<your-user-id>
+   export CLIENT_ID=<your-app-client-id>
+   export TENANT_ID=<your-app-tenant-id>
+   export USER_ID=<your-user-id>
    ```
 
 1. Set the recipient email address.
 
    ```console
-   $ export RECIPIENT=<destination-email-address>
+   export RECIPIENT=<destination-email-address>
    ```
 
 1. Deploy the `email-azure-high-and-critical-findings` cloud function. If you have not enabled Cloud Build API, then this command may fail. Follow the link in the error message to enable it and then try again.
 
    ```console
-   $ gcloud functions deploy email-azure-high-and-critical-findings \
-       --entry-point=send_email_notification \
-       --runtime=python39 \
-       --service-account="$SERVICE_ACCOUNT@$PROJECT_ID.iam.gserviceaccount.com" \
-       --set-env-vars="PROJECT_ID=$PROJECT_ID,CLIENT_ID=$CLIENT_ID,TENANT_ID=$TENANT_ID,USER_ID=$USER_ID,RECIPIENT=$RECIPIENT" \
-       --source=cf \
-       --trigger-topic=scc-critical-and-high-severity-findings-topic
+   gcloud functions deploy email-azure-high-and-critical-findings \
+     --entry-point=send_email_notification \
+     --runtime=python39 \
+     --service-account="$SERVICE_ACCOUNT@$PROJECT_ID.iam.gserviceaccount.com" \
+     --set-env-vars="PROJECT_ID=$PROJECT_ID,CLIENT_ID=$CLIENT_ID,TENANT_ID=$TENANT_ID,USER_ID=$USER_ID,RECIPIENT=$RECIPIENT" \
+     --source=cf \
+     --trigger-topic=scc-critical-and-high-severity-findings-topic
    ```
 
 ### Test It Out
